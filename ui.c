@@ -128,7 +128,7 @@ static int show_text = 0;
 static int show_text_ever = 0;   // has show_text ever been 1?
 
 static char menu[MENU_MAX_ROWS][MENU_MAX_COLS];
-static int show_menu = 1;
+static int show_menu = 0;
 static int menu_top = 0, menu_items = 0, menu_sel = 0;
 static int menu_show_start = 0;             // this is line which menu display is starting at
 static int max_menu_rows;
