@@ -242,7 +242,8 @@ Value* FormatFn(const char* name, State* state, int argc, Expr* argv[]) {
         result = location;
 #ifdef USE_EXT4
     } else if (strcmp(fs_type, "ext4") == 0) {
-        int status = make_ext4fs(location, atoll(fs_size));
+	set_ext4fs_len(atoll(fs_size));
+        int status = make_ext4fs(location, NULL, NULL, 0 ,0 , 0);
         if (status != 0) {
             fprintf(stderr, "%s: make_ext4fs failed (%d) on %s",
                     name, status, location);
