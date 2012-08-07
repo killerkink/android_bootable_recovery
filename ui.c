@@ -83,7 +83,7 @@ static gr_surface gProgressBarEmpty;
 static gr_surface gProgressBarFill;
 static int ui_has_initialized = 0;
 static int ui_log_stdout = 1;
-static int selMenuIcon = 0;
+static int selMenuIcon = 4;
 
 static const struct { gr_surface* surface; const char *name; } BITMAPS[] = {
     { &gBackgroundIcon[BACKGROUND_ICON_INSTALLING], "icon_installing" },
@@ -440,6 +440,7 @@ int device_handle_mouse(struct keyStruct *key, int visible)
 
     if (visible) {	
 	int position = 4*key->y;
+        selMenuIcon = 4;
 	//ui_print("[2] wdth: %d, hgth: %d, x: %d, y: %d, position: %d \n", gr_fb_width(), gr_fb_height(), key->x, key->y, position);
 	if(position > MENU_ICON[MENU_BACK].xL && position < MENU_ICON[MENU_BACK].xR)
 	    return GO_BACK;
