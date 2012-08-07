@@ -432,15 +432,15 @@ static void *progress_thread(void *cookie)
 int device_handle_mouse(struct keyStruct *key, int visible)
 {
     struct { int xL; int xR; } MENU_ICON[] = {
-	{ 3*gr_fb_height()/4, 4*gr_fb_height()/4 },
-	{ 2*gr_fb_height()/4, 3*gr_fb_height()/4 },
-	{ 1*gr_fb_height()/4, 2*gr_fb_height()/4 },
-	{ 0*gr_fb_height()/4, 1*gr_fb_height()/4 }, 
+	{ 3*gr_fb_height()/4+10, 4*gr_fb_height()/4-10 },
+	{ 2*gr_fb_height()/4+10, 3*gr_fb_height()/4-10 },
+	{ 1*gr_fb_height()/4+10, 2*gr_fb_height()/4-10 },
+	{ 0*gr_fb_height()/4+10, 1*gr_fb_height()/4-10 },
     };
 
     if (visible) {	
-	int position = 4*key->y;
-	//ui_print("[2] wdth: %d, hgth: %d, x: %d, y: %d, position: %d \n", gr_fb_width(), gr_fb_height(), key->x, key->y, position);
+	int position = key->y;
+	ui_print("[2] wdth: %d, hgth: %d, x: %d, y: %d, position: %d \n", gr_fb_width(), gr_fb_height(), key->x, key->y, position);
 	if(position > MENU_ICON[MENU_BACK].xL && position < MENU_ICON[MENU_BACK].xR)
 	    return GO_BACK;
 	else if(position > MENU_ICON[MENU_DOWN].xL && position < MENU_ICON[MENU_DOWN].xR)
@@ -460,16 +460,16 @@ static void ui_handle_mouse_input(int* curPos)
     //In this case MENU_SELECT icon has maximum possible height.
     int menu_max_height = gr_get_height(gMenuIcon[MENU_SELECT]);
     struct { int x; int y; int xL; int xR; } MENU_ICON[] = {
-	{ gr_fb_width() - menu_max_height, 7*gr_fb_height()/8, 3*gr_fb_height()/4, 4*gr_fb_height()/4 },
-	{ gr_fb_width() - menu_max_height,	5*gr_fb_height()/8, 2*gr_fb_height()/4, 3*gr_fb_height()/4 },
-	{ gr_fb_width() - menu_max_height,	3*gr_fb_height()/8, 1*gr_fb_height()/4, 2*gr_fb_height()/4 },
-	{ gr_fb_width() - menu_max_height,	1*gr_fb_height()/8, 0*gr_fb_height()/4, 1*gr_fb_height()/4 },
+	{ gr_fb_width() - menu_max_height, 7*gr_fb_height()/8, 3*gr_fb_height()/4+10, 4*gr_fb_height()/4-10 },
+	{ gr_fb_width() - menu_max_height,	5*gr_fb_height()/8, 2*gr_fb_height()/4+10, 3*gr_fb_height()/4-10 },
+	{ gr_fb_width() - menu_max_height,	3*gr_fb_height()/8, 1*gr_fb_height()/4+10, 2*gr_fb_height()/4-10 },
+	{ gr_fb_width() - menu_max_height,	1*gr_fb_height()/8, 0*gr_fb_height()/4+10, 1*gr_fb_height()/4-10 },
     };
 
     if (show_menu) {
     	if (curPos[0] > 0) {
-	    int position = 4 * curPos[2];
-	    //ui_print("Pressure:%d\tX:%d\tY:%d position:%d\n",mousePos[0],mousePos[1],mousePos[2],position);
+	    int position = curPos[2];
+	    //ui_print("Pressure:%d\tX:%d\tY:%d position:%d\n",curPos[0],curPos[1],curPos[2],position);
 	    pthread_mutex_lock(&gUpdateMutex);
 	    if(position > MENU_ICON[MENU_BACK].xL && position < MENU_ICON[MENU_BACK].xR && selMenuIcon != MENU_BACK) {
 		draw_icon_locked(gMenuIcon[selMenuIcon], MENU_ICON[selMenuIcon].x, MENU_ICON[selMenuIcon].y );
@@ -517,74 +517,36 @@ static int input_callback(int fd, short revents, void *data)
         return -1;
 
     if (ev.type == EV_SYN) {
-	if (ev.code == SYN_MT_REPORT) {
-	    if (actPos.num>=0 && actPos.num<MAX_MT_POINTS) {
-		// create a fake keyboard event. We will use BTN_WHEEL, BTN_GEAR_DOWN and BTN_GEAR_UP key events to fake
-                // TOUCH_MOVE, TOUCH_DOWN and TOUCH_UP in this order
-                int type = BTN_WHEEL;
-                // new and old pressure state are not consistent --> we have touch down or up event
-                if ((mousePos[actPos.num].pressure!=0) != (actPos.pressure!=0)) {
-                    if (actPos.pressure == 0) {
-                        type = BTN_GEAR_UP;
-                        if (actPos.num==0) {
-                            if (mousePos[0].length<15) {
-                                // consider this a mouse click
-                                type = BTN_MOUSE;
-                            }
-                            memset(&grabPos,0,sizeof(grabPos));
-                        }
-                    } else if (actPos.pressure != 0) {
-                        type == BTN_GEAR_DOWN;
-                        if (actPos.num==0) {
-                            grabPos = actPos;
-                        }
-                    }
-                }
+	if (actPos.num > 0){
+	    int type = BTN_WHEEL;
+	    if (actPos.pressure == 0) {
+		type = BTN_GEAR_UP;
+	    } else {
+		type == BTN_GEAR_DOWN;
+	    }
                 fake_key = 1;
                 ev.type = EV_KEY;
                 ev.code = type;
-                ev.value = actPos.num+1;
-
-                // this should be locked, but that causes ui events to get dropped, as the screen drawing takes too much time
-                // this should be solved by making the critical section inside the drawing much much smaller
-                if (actPos.pressure) {
-                  if (mousePos[actPos.num].pressure) {
-                      actPos.length = mousePos[actPos.num].length + abs(mousePos[actPos.num].x-actPos.x) + abs(mousePos[actPos.num].y-actPos.y);
-                  } else {
-                      actPos.length = 0;
-                  }
-                } else {
-                      actPos.length = 0;
-                  }
-                  oldMousePos[actPos.num] = mousePos[actPos.num];
-                  mousePos[actPos.num] = actPos;
-		  int curPos[] = {actPos.pressure, actPos.x, actPos.y};
-                   ui_handle_mouse_input(curPos);
-            }
-
-            memset(&actPos,0,sizeof(actPos));
-        } else {
-            return 0;
-          }
-            } else if (ev.type == EV_ABS) {
-              // multitouch records are sent as ABS events. Well at least on the SGS-i9000
-              if (ev.code == ABS_MT_POSITION_X) {
-                actPos.x = MT_X(ev.value);
-              } else if (ev.code == ABS_MT_POSITION_Y) {
-                actPos.y = MT_Y(ev.value);
-              } else if (ev.code == ABS_MT_TOUCH_MAJOR) {
-                actPos.pressure = ev.value; // on SGS-i9000 this is 0 for not-pressed and 40 for pressed
-              } else if (ev.code == ABS_MT_WIDTH_MAJOR) {
-                // num is stored inside the high byte of width. Well at least on SGS-i9000
-                if (actPos.num==0) {
-                  // only update if it was not already set. On a normal device MT_TRACKING_ID is sent
-                  actPos.num = ev.value >> 8;
-                }
-                actPos.size = ev.value & 0xFF;
-              } else if (ev.code == ABS_MT_TRACKING_ID) {
-                // on a normal device, the num is got from this value
-                actPos.num = ev.value;
-              }
+                ev.value = actPos.num;
+	    int curPos[] = {actPos.pressure, actPos.x, actPos.y};
+	    mousePos[actPos.num] = actPos;
+	    ui_handle_mouse_input(curPos);
+	    memset(&actPos,0,sizeof(actPos));	
+	} else {
+	    return 0;
+	}    
+    } else if (ev.type == EV_ABS) {
+	if(ev.code == ABS_X){
+	    actPos.x = ev.value;
+	} else if(ev.code == ABS_Y){
+            actPos.y = ev.value;
+	} 
+    } else if (ev.type == EV_KEY) { 
+	if (ev.code == BTN_TOUCH) {
+	actPos.num= 1;
+	actPos.pressure=ev.value;
+	return 0;
+	}
     } else if (ev.type == EV_REL) {
         if (ev.code == REL_Y) {
             // accumulate the up or down motion reported by
@@ -720,10 +682,6 @@ void ui_init(void)
         gInstallationOverlay = NULL;
     }
 
-    memset(&actPos, 0, sizeof(actPos));
-    memset(&grabPos, 0, sizeof(grabPos));
-    memset(mousePos, 0, sizeof(mousePos));
-    memset(oldMousePos, 0, sizeof(oldMousePos));
 
     pt_ui_thread_active = 1;
     pt_input_thread_active = 1;
@@ -1013,11 +971,11 @@ struct keyStruct *ui_wait_key()
     if (key_queue_len > 0) {
         key.code = key_queue[0];
         memcpy(&key_queue[0], &key_queue[1], sizeof(int) * --key_queue_len);
-	if((key.code == BTN_GEAR_UP || key.code == BTN_MOUSE) && !actPos.pressure && oldMousePos[actPos.num].pressure && key_queue_len_back != (key_queue_len -1))
+	if((key.code == BTN_GEAR_UP || key.code == BTN_MOUSE) && !actPos.pressure && key_queue_len_back != (key_queue_len -1))
 	{	
 	    key.code = ABS_MT_POSITION_X;
-	    key.x = oldMousePos[actPos.num].x;
-	    key.y = oldMousePos[actPos.num].y;
+	    key.x = mousePos[1].x;
+	    key.y = mousePos[1].y;
 	}
     }
     pthread_mutex_unlock(&key_queue_mutex);
